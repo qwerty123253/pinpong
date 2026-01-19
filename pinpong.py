@@ -1,13 +1,20 @@
 from pygame import *
 from random import *
 import sys
+
 win = display.set_mode((800, 500))
 
 clock = time.Clock()
+
+init()
+image_generator = font.Font(None, 50)
+
 class Player():
     def __init__(self, x, y, speed):
         self.hitbox = Rect(x, y, 20, 150)
         self.speed = speed
+        self.score = 0
+        self.score_img = image_generator.render(str(self.score), False, (255, 255, 255), (0, 0, 0)) # четвёртое это бэкграунд
 
     def move(self):
         key_list = key.get_pressed()
@@ -21,6 +28,8 @@ class Player():
             self.hitbox.top = 0
         if self.hitbox.colliderect(ball1.hitbox):
             ball1.speed_x = ball1.speed
+            ball1.random_x = randint(1, 2)
+            ball1.random_y = randint(1, 2)
 
 
     def AI(self):
@@ -42,6 +51,8 @@ class Player():
         # Отбиваем мяч
         if self.hitbox.colliderect(ball1.hitbox):
             ball1.speed_x = -ball1.speed
+            ball1.random_x = randint(1, 2)
+            ball1.random_y = randint(1, 2)
             #self.hitbox.y = ball1.hitbox.y
             #if self.hitbox.colliderect(ball1.hitbox):
                 #ball1.speed_x = -ball1.speed
@@ -59,22 +70,37 @@ class Ball():
             self.speed = speed
             self.speed_x = speed
             self.speed_y = speed
+            self.random_x = 1
+            self.random_y = 1
 
 
         def move(self):
-            self.hitbox.x += self.speed_x
-            self.hitbox.y += self.speed_y
+            self.hitbox.x += self.speed_x * self.random_x
+            self.hitbox.y += self.speed_y * self.random_y
             if self.hitbox.top < 0:
                 self.speed_y = self.speed
             if self.hitbox.bottom > 500:
                 self.speed_y = -self.speed
             if self.hitbox.left < 0:
                 self.speed_x = self.speed
-                player1.hitbox.height -= 10
+                AI.score += 1
+                AI.score_img = image_generator.render(str(AI.score), False, (255, 255, 255), (0, 0, 0))
+                self.hitbox.center = (400, 250)
+                self.random_x = 1
+                self.random_y = 1
+                #time.wait(300)
+                #player1.hitbox.height -= 10
                 player1.speed += 0.2
             if self.hitbox.right > 800:
                self.speed_x = -self.speed
-               AI.hitbox.height += 10
+               player1.score += 1
+               player1.score_img = image_generator.render(str(player1.score), False, (255, 255, 255), (0, 0, 0))
+               #AI.hitbox.height += 10
+               self.hitbox.center = (400, 250)
+               self.random_x = 1
+               self.random_y = 1
+               #time.wait(300)
+               
 
 
 
@@ -88,7 +114,7 @@ class Ball():
 
 
 player1 = Player(50, 240, 2)
-ball1 = Ball(10, 10, 2)
+ball1 = Ball(10, 10, 1)
 AI = Player(700, 240, 2)
 
 while True:
@@ -104,13 +130,14 @@ while True:
     ball1.move()
     draw.rect(win, (0, 255, 0), ball1.hitbox)
 
+    win.blit(player1.score_img, (20, 20))
+    win.blit(AI.score_img, (750, 20))
 
-
-    if player1.hitbox.height == 10:
+    if player1.score == 10:
             quit()
             sys.exit()
 
-    if AI.hitbox.height == 230:
+    if AI.score == 10:
             quit()
             sys.exit()
 
