@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pong с AI</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #111;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      border: 2px solid white;
+      background: #000;
+    }
+    #score {
+      position: absolute;
+      top: 20px;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">0 : 0</div>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+
+    // Параметры ракеток
+    const paddleWidth = 10;
+    const paddleHeight = 80;
+    const playerSpeed = 6;
+    const aiSpeed = 4; // Скорость AI
+
+    // Игрок
+    const player = {
+      x: 20,
+      y: canvas.height / 2 - paddleHeight / 2,
+      width: paddleWidth,
+      height: paddleHeight,
+      dy: 0
+    };
+
+    // AI
+    const ai = {
+      x: canvas.width - 20 - paddleWidth,
+      y: canvas.height / 2 - paddleHeight / 2,
+      width: paddleWidth,
+      height: paddleHeight,
+      dy: 0
+    };
+
+    // Мяч
+    const ball = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      size: 10,
+      speed: 5,
+      dx: 5,
+      dy: 5
+    };
+
+    // Счёт
+    let playerScore = 0;
+    let aiScore = 0;
+
+    // Управление
+    const keys = {};
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+    // Обновление позиции игрока
+    function movePlayer() {
+      player.dy = 0;
+      if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+        player.dy = -playerSpeed;
+      }
+      if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+        player.dy = playerSpeed;
+      }
+
+      player.y += player.dy;
+
+      // Ограничение по краям
+      if (player.y < 0) player.y = 0;
+      if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+    }
+
+    // Логика AI
+    function moveAI() {
+      const centerPaddle = ai.y + ai.height / 2;
+      const diff = ball.y - centerPaddle;
+
+      if (Math.abs(diff) < aiSpeed) {
+        ai.dy = diff;
+      } else {
+        ai.dy = diff > 0 ? aiSpeed : -aiSpeed;
+      }
+
+      ai.y += ai.dy;
+
+      // Ограничение по краям
+      if (ai.y < 0) ai.y = 0;
+      if (ai.y + ai.height > canvas.height) ai.y = canvas.height - ai.height;
+    }
+
+    // Обновление мяча
+    function moveBall() {
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+
+      // Отскок от верхней и нижней стен
+      if (ball.y <= 0 || ball.y + ball.size >= canvas.height) {
+        ball.dy *= -1;
+      }
+
+      // Столкновение с ракетками
+      if (
+        ball.x <= player.x + player.width &&
+        ball.y + ball.size >= player.y &&
+        ball.y <= player.y + player.height &&
+        ball.dx < 0
+      ) {
+        const hitPoint = (ball.y - (player.y + player.height / 2)) / (player.height / 2);
+        ball.dx = Math.abs(ball.dx) * 1.05; // Ускорение
+        ball.dy = hitPoint * ball.speed;
+      }
+
+      if (
+        ball.x + ball.size >= ai.x &&
+        ball.y + ball.size >= ai.y &&
+        ball.y <= ai.y + ai.height &&
+        ball.dx > 0
+      ) {
+        const hitPoint = (ball.y - (ai.y + ai.height / 2)) / (ai.height / 2);
+        ball.dx = -Math.abs(ball.dx) * 1.05;
+        ball.dy = hitPoint * ball.speed;
+      }
+
+      // Забитый гол
+      if (ball.x < 0) {
+        aiScore++;
+        resetBall();
+      } else if (ball.x > canvas.width) {
+        playerScore++;
+        resetBall();
+      }
+
+      updateScore();
+    }
+
+    function resetBall() {
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.dx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+      ball.dy = (Math.random() * 2 - 1) * ball.speed;
+    }
+
+    function updateScore() {
+      scoreDisplay.textContent = `${playerScore} : ${aiScore}`;
+    }
+
+    // Отрисовка
+    function draw() {
+      // Очистка
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Ракетки
+      ctx.fillStyle = 'white';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillRect(ai.x, ai.y, ai.width, ai.height);
+
+      // Мяч
+      ctx.fillRect(ball.x, ball.y, ball.size, ball.size);
+
+      // Центральная линия
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.strokeStyle = 'white';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Главный цикл
+    function gameLoop() {
+      movePlayer();
+      moveAI();
+      moveBall();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Запуск
+    gameLoop();
+  </script>
+</body>
+</html>
